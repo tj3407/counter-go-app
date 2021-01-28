@@ -10,7 +10,25 @@ import (
 	"sync"
 )
 
-var results[]string
+type Response struct {
+	Method string `json:"method"`
+	URL string `json:"url"`
+	Headers Headers `json:"headers"`
+}
+
+type Headers struct {
+	XForward string `json:"x-forwarded-proto"`
+	XForwardPort string `json:"x-forwarded-port"`
+	Host string `json:"host"`
+	XAmazonTrace string `json:"x-amzn-trace-id"`
+	AcceptEncoding string `json:"accept-encoding"`
+	UserAgent string `json:"user-agent"`
+	Accept string `json:"accept"`
+	CacheControl string `json:"cache-control"`
+	PostmanToken string `json:"postman-token"`
+}
+
+var results []interface{}
 
 func callApi(count int, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -19,13 +37,18 @@ func callApi(count int, wg *sync.WaitGroup) {
 		log.Fatalln(err)
 	}
 
+	d := &Response{}
+	d.Method = "GET"
+	d.Headers.Accept = "*/*"
+	d.Headers.CacheControl = "no-cache"
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	sb := string(body)
-	results = append(results, sb)
+	_ = json.Unmarshal(body, &d)
+	results = append(results, d)
 }
 
 func call_postmanEcho(x string) {
@@ -54,6 +77,7 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+			rw.Header().Add("method", "GET")
 			rw.Write(data)
 		}
 	})
